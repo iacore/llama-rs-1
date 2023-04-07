@@ -36,6 +36,20 @@ pub(crate) fn read_string(reader: &mut impl BufRead, len: usize) -> Result<Strin
     Ok(s)
 }
 
+pub(crate) fn read_bytes_with_len(
+    reader: &mut impl BufRead,
+    len: usize,
+) -> Result<Vec<u8>, LoadError> {
+    let mut bytes = vec![0u8; len];
+    reader
+        .read_exact(&mut bytes)
+        .map_err(|e| LoadError::ReadExactFailed {
+            source: e,
+            bytes: len,
+        })?;
+    Ok(bytes)
+}
+
 // NOTE: Implementation from #![feature(buf_read_has_data_left)]
 fn has_data_left(reader: &mut impl BufRead) -> Result<bool, std::io::Error> {
     reader.fill_buf().map(|b| !b.is_empty())
