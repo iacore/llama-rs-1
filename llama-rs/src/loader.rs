@@ -347,7 +347,8 @@ pub(crate) fn load_weights_ggjt(
         let offset_aligned: u64 = (offset_curr + 31) & !31;
         unsafe {
             let ptr = mmap.as_ptr().offset(offset_aligned as isize);
-            tensor.set_data(ptr as *mut std::ffi::c_void);
+            ptr.copy_to_nonoverlapping(tensor.data() as *mut u8, tensor.nbytes());
+            // tensor.set_data(ptr as *mut std::ffi::c_void);
         }
         let tensor_data_size = tensor.nbytes() as u64;
         reader.seek(SeekFrom::Start(offset_aligned + tensor_data_size))?;
