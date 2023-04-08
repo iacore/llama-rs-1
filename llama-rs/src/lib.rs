@@ -26,6 +26,7 @@ use memmap2::Mmap;
 
 use llama_loader::util::*;
 use llama_loader::{decode_element_type, ContainerType};
+use llama_loader::util::*;
 
 /// dummy struct
 #[cfg(not(feature = "mmap"))]
