@@ -11,7 +11,7 @@
 use std::{
     ffi::c_void,
     ptr::NonNull,
-    sync::{Arc, Weak},
+    sync::{Arc, Weak}, ops::Deref,
 };
 
 /// Magic constant for `ggml` files (versioned, ggmf).
@@ -86,20 +86,29 @@ pub struct Context {
 }
 impl Context {
     /// Creates a new [Context] with the specified `mem_size` as a working area.
-    pub fn init(mem_size: usize) -> Self {
+    pub fn init(mem_size: usize, no_alloc: bool) -> Self {
         let raw = unsafe {
             ggml_sys::ggml_init(ggml_sys::ggml_init_params {
                 mem_size,
                 // Null here means we want ggml to own this memory. We don't
                 // support passing an owned buffer from the Rust side.
                 mem_buffer: std::ptr::null_mut(),
-                no_alloc: false,
+                no_alloc,
             })
         };
         Self {
             ptr: Arc::new(NonNull::new(raw).expect("Should not be null")),
         }
     }
+
+    /// read context
+    pub fn as_ref(&self) -> &ggml_sys::ggml_context {
+        unsafe { self.ptr.deref().as_ref() }
+    }
+    
+    // pub fn as_mut(&mut self) -> &mut ggml_sys::ggml_context {
+    //     unsafe { (*self.ptr).as_mut() }
+    // }
 
     /// Wraps a raw tensor with a weak pointer to the context.
     fn new_tensor_raw(&self, raw: *mut ggml_sys::ggml_tensor) -> Tensor {
@@ -437,17 +446,17 @@ impl Tensor {
         })
     }
 
-    // /// Set the tensor's data pointer (useful for mmap-ed data)
-    // ///
-    // /// # Safety
-    // ///
-    // /// The memory region from `data_ptr` to `data_ptr.offset(tensor.nbytes())` will be read from.
-    // pub unsafe fn set_data(&self, data_ptr: *mut c_void) {
-    //     self.with_alive_ctx(|| {
-    //         // SAFETY: The with_alive_call guarantees the context is alive
-    //         unsafe { *self.ptr.as_ptr() }.data = data_ptr;
-    //     })
-    // }
+    /// Set the tensor's data pointer (useful for mmap-ed data)
+    ///
+    /// # Safety
+    ///
+    /// The memory region from `data_ptr` to `data_ptr.offset(tensor.nbytes())` will be read from.
+    pub unsafe fn set_data(&self, data_ptr: *mut c_void) {
+        self.with_alive_ctx(|| {
+            // SAFETY: The with_alive_call guarantees the context is alive
+            unsafe { *self.ptr.as_ptr() }.data = data_ptr;
+        })
+    }
 
     /// Number of elements in this tensor.
     pub fn nelements(&self) -> usize {

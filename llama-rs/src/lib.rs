@@ -138,7 +138,7 @@ impl InferenceSession {
 }
 impl Clone for InferenceSession {
     fn clone(&self) -> Self {
-        let context = ggml::Context::init(self.memory_size);
+        let context = ggml::Context::init(self.memory_size, false);
         let memory_k = context.new_tensor_1d(self.memory_k.get_type(), self.memory_k.nelements());
         let memory_v = context.new_tensor_1d(self.memory_v.get_type(), self.memory_v.nelements());
 
@@ -736,7 +736,11 @@ impl Model {
         };
 
         // Initialize the context
-        let context = ggml::Context::init(ctx_size);
+        let no_alloc = match model_type {
+            ContainerType::GGJT => true,
+            _ => false,
+        };
+        let context = ggml::Context::init(ctx_size, no_alloc);
 
         let mut model = {
             let mut tensors = HashMap::new();
@@ -857,7 +861,7 @@ impl Model {
             ctx_size
         };
 
-        let session_ctx = ggml::Context::init(ctx_size);
+        let session_ctx = ggml::Context::init(ctx_size, false);
 
         // Initialize key + value memory tensors
         let n_mem = n_layer * n_ctx;
@@ -916,7 +920,7 @@ impl Model {
             // add 10% to account for ggml object overhead
             buf_size = (1.1f64 * session.mem_per_token as f64 * n as f64) as usize;
         };
-        let ctx0 = ggml::Context::init(buf_size);
+        let ctx0 = ggml::Context::init(buf_size, false);
 
         let mut gf = ggml::ComputationGraph::new(n_threads);
 
